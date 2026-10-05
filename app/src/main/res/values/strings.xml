@@ -32,4 +32,5 @@
     <string name="checking">Checking…</string>
     <string name="err_unreachable">Cannot reach that address. Check the URL.</string>
     <string name="err_not_opencode">That address does not look like an opencode server.</string>
+    <string name="err_timeout">Timed out waiting for the server.</string>
 </resources>

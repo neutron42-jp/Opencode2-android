@@ -9,6 +9,8 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.net.http.SslError
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.SslErrorHandler
@@ -36,12 +38,41 @@ class MainActivity : AppCompatActivity() {
         const val EXTRA_FIRST_URL = "first_url"
         const val ACTION_RELOAD = "ai.opencode.app.RELOAD"
         private const val REQ_FILE = 1001
+        private const val WATCHDOG_MS = 12_000L
     }
 
     private lateinit var webView: WebView
     private lateinit var errorView: View
     private lateinit var prefs: ServerPrefs
     private var fileChooser: ValueCallback<Array<Uri>>? = null
+
+    // WebView has no load timeout of its own: without this, a dead route
+    // (e.g. VPN off) sits on a black screen until TCP gives up.
+    private val watchdogHandler = Handler(Looper.getMainLooper())
+    private var watchdog: Runnable? = null
+    private var pageDone = false
+
+    private fun armWatchdog() {
+        cancelWatchdog()
+        pageDone = false
+        watchdog = Runnable {
+            if (!pageDone && this::webView.isInitialized) {
+                webView.stopLoading()
+                showLoadError(getString(R.string.err_timeout))
+            }
+        }
+        watchdogHandler.postDelayed(watchdog!!, WATCHDOG_MS)
+    }
+
+    private fun cancelWatchdog() {
+        watchdog?.let { watchdogHandler.removeCallbacks(it) }
+        watchdog = null
+    }
+
+    private fun showLoadError(detail: String) {
+        errorView.visibility = View.VISIBLE
+        findViewById<TextView>(R.id.error_detail).text = detail
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -92,9 +123,12 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
                 errorView.visibility = View.GONE
+                armWatchdog()
             }
 
             override fun onPageFinished(view: WebView, url: String) {
+                pageDone = true
+                cancelWatchdog()
                 injectBuiltIn()
                 injectUserStyle()
                 injectPendingShare()
@@ -106,6 +140,8 @@ class MainActivity : AppCompatActivity() {
                 error: WebResourceError
             ) {
                 if (request.isForMainFrame) {
+                    pageDone = true
+                    cancelWatchdog()
                     errorView.visibility = View.VISIBLE
                     findViewById<TextView>(R.id.error_detail).text =
                         getString(R.string.error_detail, error.errorCode, error.description)
@@ -221,6 +257,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        cancelWatchdog()
         fileChooser?.onReceiveValue(null)
         fileChooser = null
         if (this::webView.isInitialized) webView.destroy()
