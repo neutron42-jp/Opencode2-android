@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Opencode</string>
+    <string name="shortcut_settings_short">設定</string>
+    <string name="shortcut_settings_long">サーバ・外観の設定</string>
+</resources>
