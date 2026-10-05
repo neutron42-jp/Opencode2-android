@@ -12,11 +12,26 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
+    }
+
+    signingConfigs {
+        create("release") {
+            val home = System.getProperty("user.home")
+            storeFile = file(
+                System.getenv("OPENCODE_KEYSTORE_FILE")
+                    ?: "$home/.android/opencode-release.keystore"
+            )
+            storePassword = System.getenv("OPENCODE_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("OPENCODE_KEY_ALIAS") ?: "opencode"
+            keyPassword = System.getenv("OPENCODE_KEY_PASSWORD")
+                ?: System.getenv("OPENCODE_KEYSTORE_PASSWORD")
+        }
     }
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

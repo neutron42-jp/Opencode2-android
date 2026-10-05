@@ -4,4 +4,7 @@ build/
 local.properties
 *.iml
 .DS_Store
+*.keystore
+*.jks
+keystore.properties
 .playwright-mcp/
