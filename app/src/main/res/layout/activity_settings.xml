@@ -12,7 +12,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="接続先" />
+            android:text="@string/settings_server" />
 
         <TextView
             android:id="@+id/text_server_url"
@@ -31,14 +31,14 @@
                 android:id="@+id/btn_change_server"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="サーバ変更" />
+                android:text="@string/change_server" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_logout"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
-                android:text="ログアウト" />
+                android:text="@string/logout" />
         </LinearLayout>
 
         <CheckBox
@@ -46,21 +46,21 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="外観修正を有効にする" />
+            android:text="@string/userscript_enable" />
 
         <CheckBox
             android:id="@+id/check_appmenu"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="WebUIのメニューに更新・アプリ設定を追加"
+            android:text="@string/appmenu_enable"
             android:checked="true" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="CSS (例: body{padding-bottom:80px})" />
+            android:text="@string/css_label" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
@@ -79,7 +79,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="JavaScript (ページ読込後に実行)" />
+            android:text="@string/js_label" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
@@ -99,6 +99,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="保存して更新" />
+            android:text="@string/save_reload" />
     </LinearLayout>
 </ScrollView>

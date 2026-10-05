@@ -19,7 +19,7 @@ class SettingsActivity : AppCompatActivity() {
         val prefs = ServerPrefs(this)
 
         findViewById<TextView>(R.id.text_server_url).text =
-            prefs.serverUrl ?: "(未設定)"
+            prefs.serverUrl ?: getString(R.string.not_set)
 
         findViewById<MaterialButton>(R.id.btn_change_server).setOnClickListener {
             prefs.serverUrl = null
@@ -28,7 +28,7 @@ class SettingsActivity : AppCompatActivity() {
         }
         findViewById<MaterialButton>(R.id.btn_logout).setOnClickListener {
             CookieManager.getInstance().removeAllCookies {
-                Toast.makeText(this, "ログアウトしました", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.logged_out), Toast.LENGTH_SHORT).show()
             }
             prefs.refreshRequested = true
             finish()

@@ -101,7 +101,7 @@ class MainActivity : AppCompatActivity() {
                 if (request.isForMainFrame) {
                     errorView.visibility = View.VISIBLE
                     findViewById<TextView>(R.id.error_detail).text =
-                        "詳細: ${error.errorCode} ${error.description}"
+                        getString(R.string.error_detail, error.errorCode, error.description)
                 }
             }
 
@@ -121,7 +121,7 @@ class MainActivity : AppCompatActivity() {
                     runCatching {
                         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target)))
                     }.onFailure {
-                        Toast.makeText(this@MainActivity, "開けませんでした", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, getString(R.string.open_failed), Toast.LENGTH_SHORT).show()
                     }
                     true
                 }
@@ -243,7 +243,7 @@ class MainActivity : AppCompatActivity() {
 
     fun currentServerUrl(): String = prefs.serverUrl ?: ""
 
-    /** Built-in drawer buttons (更新 / アプリ設定), styled like stock ones. */
+    /** Built-in drawer buttons (Reload / App settings), styled like stock ones. */
     private fun injectBuiltIn() {
         if (!prefs.appMenuEnabled) return
         webView.evaluateJavascript(BuiltInScript.JS, null)
@@ -287,7 +287,7 @@ class MainActivity : AppCompatActivity() {
             if (result?.contains("clipboard") == true) {
                 val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 cm.setPrimaryClip(ClipData.newPlainText("opencode share", text))
-                Toast.makeText(this, "共有テキストをクリップボードにコピーしました", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, getString(R.string.share_clipboard), Toast.LENGTH_LONG).show()
             }
         }
     }

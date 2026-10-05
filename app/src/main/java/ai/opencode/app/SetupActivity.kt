@@ -55,7 +55,7 @@ class SetupActivity : AppCompatActivity() {
             }
             val urlRaw = urlInput.text.toString()
             if (urlRaw.isBlank()) {
-                Toast.makeText(this, "サーバURLを入力してください", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.setup_need_url), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             prefs.serverUrl = ServerPrefs.normalize(urlRaw)

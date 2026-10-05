@@ -16,13 +16,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="サーバに接続" />
+        android:text="@string/setup_title" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:hint="サーバURL (例 http://192.168.1.10:49374)">
+        android:hint="@string/setup_url_hint">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/input_server_url"
@@ -35,7 +35,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:hint="ペアリングリンク (任意、貼ると優先)">
+        android:hint="@string/setup_pair_hint">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/input_pair_link"
@@ -49,5 +49,5 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
-        android:text="接続" />
+        android:text="@string/setup_connect" />
 </LinearLayout>

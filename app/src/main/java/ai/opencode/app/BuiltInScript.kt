@@ -1,7 +1,7 @@
 package ai.opencode.app
 
 /**
- * Built-in userscript: appends 更新 / アプリ設定 buttons below the
+ * Built-in userscript: appends Reload / App settings buttons below the
  * Settings|Help row in the WebUI mobile drawer. Styled with the same
  * classes as the stock buttons so light/dark themes match automatically.
  */
