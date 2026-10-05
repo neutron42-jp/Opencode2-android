@@ -12,7 +12,9 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.CookieManager
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.SslErrorHandler
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -21,6 +23,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import java.net.InetSocketAddress
@@ -42,8 +45,10 @@ class MainActivity : AppCompatActivity() {
         private const val REQ_FILE = 1001
         private const val WATCHDOG_MS = 12_000L
         private const val PROBE_TIMEOUT_MS = 3_000
+        private const val SILENCE_MS = 3_000L
     }
 
+    private lateinit var webContainer: FrameLayout
     private lateinit var webView: WebView
     private lateinit var errorView: View
     private lateinit var loadingView: View
@@ -56,13 +61,17 @@ class MainActivity : AppCompatActivity() {
     private var watchdog: Runnable? = null
     private var pageDone = false
     private var expectRender = true
+    private var awaitStart = false
+    private var healedCurrent = false
 
     private fun armWatchdog() {
         cancelWatchdog()
         pageDone = false
         if (!expectRender) return
+        EventLog.log("watchdog", "armed ${WATCHDOG_MS}ms")
         watchdog = Runnable {
             if (!pageDone && this::webView.isInitialized) {
+                EventLog.log("watchdog", "fired, stopping load")
                 webView.stopLoading()
                 showLoadError(getString(R.string.err_timeout))
             }
@@ -82,29 +91,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        prefs = ServerPrefs(this)
-        setContentView(R.layout.activity_main)
-
-        errorView = findViewById(R.id.error_view)
-        loadingView = findViewById(R.id.loading_view)
-        findViewById<MaterialButton>(R.id.btn_retry).setOnClickListener {
-            reloadNow()
-        }
-        findViewById<MaterialButton>(R.id.btn_settings).setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
-        }
-        findViewById<MaterialButton>(R.id.btn_edit_url).setOnClickListener {
-            startActivity(
-                Intent(this, SetupActivity::class.java).apply {
-                    putExtra(SetupActivity.EXTRA_EDIT_URL, prefs.serverUrl)
-                }
-            )
-        }
-
-        webView = findViewById(R.id.webview)
-        with(webView.settings) {
+    private fun newWebView(): WebView {
+        val wv = WebView(this)
+        with(wv.settings) {
             javaScriptEnabled = true
             domStorageEnabled = true
             databaseEnabled = true
@@ -120,18 +109,24 @@ class MainActivity : AppCompatActivity() {
             }
         }
         // Kill browser feel: no long-press popup, no text-selection handles menu.
-        webView.setOnLongClickListener { true }
-        webView.isLongClickable = false
-        webView.isHapticFeedbackEnabled = false
+        wv.setOnLongClickListener { true }
+        wv.isLongClickable = false
+        wv.isHapticFeedbackEnabled = false
 
         CookieManager.getInstance().setAcceptCookie(true)
-        webView.addJavascriptInterface(AppBridge(this), "OpenCodeApp")
+        wv.addJavascriptInterface(AppBridge(this), "OpenCodeApp")
 
-        webView.webViewClient = object : WebViewClient() {
+        wv.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                awaitStart = false
+                EventLog.log("web", "started $url")
                 errorView.visibility = View.GONE
                 loadingView.visibility = View.VISIBLE
                 armWatchdog()
+            }
+
+            override fun onPageCommitVisible(view: WebView, url: String) {
+                EventLog.log("web", "commit $url")
             }
 
             override fun onPageFinished(view: WebView, url: String) {
@@ -147,6 +142,10 @@ class MainActivity : AppCompatActivity() {
                 error: WebResourceError
             ) {
                 if (request.isForMainFrame) {
+                    EventLog.log(
+                        "web",
+                        "error ${error.errorCode} ${error.description} url=${request.url}"
+                    )
                     pageDone = true
                     cancelWatchdog()
                     loadingView.visibility = View.GONE
@@ -160,6 +159,17 @@ class MainActivity : AppCompatActivity() {
                 // Self-hosted server on a private tailnet: let the user proceed.
                 // Browser equivalent of tapping through a cert warning.
                 handler.proceed()
+            }
+
+            override fun onRenderProcessGone(
+                view: WebView,
+                detail: RenderProcessGoneDetail
+            ): Boolean {
+                EventLog.log("web", "renderer gone, crashed=${detail.didCrash()}")
+                pageDone = true
+                cancelWatchdog()
+                showLoadError("Renderer gone (crashed=${detail.didCrash()})")
+                return true
             }
 
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
@@ -179,7 +189,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        webView.webChromeClient = object : WebChromeClient() {
+        wv.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
                 view: WebView,
                 filePathCallback: ValueCallback<Array<Uri>>,
@@ -200,6 +210,40 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
         }
+        return wv
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        prefs = ServerPrefs(this)
+        EventLog.init(filesDir, BuildConfig.VERSION_NAME)
+        setContentView(R.layout.activity_main)
+
+        errorView = findViewById(R.id.error_view)
+        loadingView = findViewById(R.id.loading_view)
+        findViewById<MaterialButton>(R.id.btn_retry).setOnClickListener {
+            reloadNow()
+        }
+        findViewById<MaterialButton>(R.id.btn_settings).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+        findViewById<MaterialButton>(R.id.btn_edit_url).setOnClickListener {
+            startActivity(
+                Intent(this, SetupActivity::class.java).apply {
+                    putExtra(SetupActivity.EXTRA_EDIT_URL, prefs.serverUrl)
+                }
+            )
+        }
+
+        webContainer = findViewById(R.id.webview_container)
+        webView = newWebView()
+        webContainer.addView(
+            webView, 0,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -240,8 +284,15 @@ class MainActivity : AppCompatActivity() {
         if (errorView.visibility == View.VISIBLE) return
         if (loadingView.visibility == View.VISIBLE) return
         Thread {
+            EventLog.log("probe", "start $base")
             val ok = runCatching {
                 val u = Uri.parse(base)
+                val addr = try {
+                    java.net.InetAddress.getByName(u.host).hostAddress
+                } catch (e: Exception) {
+                    "dns-fail:${e.message?.take(60)}"
+                }
+                EventLog.log("probe", "dns ${u.host} => $addr")
                 Socket().use { s ->
                     s.connect(
                         InetSocketAddress(u.host, if (u.port != -1) u.port else 80),
@@ -251,6 +302,7 @@ class MainActivity : AppCompatActivity() {
                 true
             }.getOrDefault(false)
             runOnUiThread {
+                EventLog.log("probe", if (ok) "ok" else "failed")
                 if (!ok && errorView.visibility != View.VISIBLE &&
                     this::webView.isInitialized
                 ) {
@@ -289,8 +341,58 @@ class MainActivity : AppCompatActivity() {
         lastUrl = u
         // about:blank carries no app UI, so nothing to wait for.
         expectRender = u != "about:blank"
+        EventLog.log("nav", "load $u")
         errorView.visibility = View.GONE
+        awaitStart = true
+        healedCurrent = false
         webView.loadUrl(u)
+        watchdogHandler.postDelayed({
+            if (awaitStart && this::webView.isInitialized) {
+                onSilentLoad()
+            }
+        }, SILENCE_MS)
+    }
+
+    /**
+     * loadUrl produced zero callbacks: the instance may be wedged.
+     * Recreate it once, then give up with a proper error screen.
+     */
+    private fun onSilentLoad() {
+        if (!this::webView.isInitialized) return
+        EventLog.log("web", "silent, url=${webView.url}")
+        webView.evaluateJavascript("navigator.userAgent") { ua ->
+            EventLog.log("web", "ping => ${ua?.take(80)}")
+        }
+        if (healedCurrent) {
+            EventLog.log("web", "still silent after recreate, giving up")
+            awaitStart = false
+            webView.stopLoading()
+            showLoadError(getString(R.string.err_timeout))
+            return
+        }
+        healedCurrent = true
+        EventLog.log("web", "recreating WebView")
+        runCatching {
+            webContainer.removeView(webView)
+            webView.destroy()
+        }
+        webView = newWebView()
+        webContainer.addView(
+            webView, 0,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+        lastUrl?.let { webView.loadUrl(it) }
+        watchdogHandler.postDelayed({
+            if (awaitStart && this::webView.isInitialized) {
+                EventLog.log("web", "still silent after recreate, giving up")
+                awaitStart = false
+                webView.stopLoading()
+                showLoadError(getString(R.string.err_timeout))
+            }
+        }, SILENCE_MS)
     }
 
     @Deprecated("file chooser needs the legacy callback")
@@ -349,6 +451,7 @@ class MainActivity : AppCompatActivity() {
     /** Called from the page once the WebUI has rendered its first frame. */
     fun onFirstRender() {
         if (!this::webView.isInitialized) return
+        EventLog.log("web", "first render")
         pageDone = true
         cancelWatchdog()
         loadingView.visibility = View.GONE

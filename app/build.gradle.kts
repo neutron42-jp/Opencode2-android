@@ -11,8 +11,8 @@ android {
         applicationId = "ai.opencode.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 7
-        versionName = "1.0.6"
+        versionCode = 10
+        versionName = "1.0.7"
     }
 
     signingConfigs {
@@ -42,6 +42,9 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+    buildFeatures {
+        buildConfig = true
     }
     kotlinOptions {
         jvmTarget = "17"

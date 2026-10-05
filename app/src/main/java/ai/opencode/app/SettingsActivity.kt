@@ -51,5 +51,40 @@ class SettingsActivity : AppCompatActivity() {
             prefs.refreshRequested = true
             finish()
         }
+
+        findViewById<TextView>(R.id.text_version).text =
+            "v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
+        findViewById<MaterialButton>(R.id.btn_download_log).setOnClickListener {
+            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TITLE, "opencode-log.txt")
+            }
+            @Suppress("DEPRECATION")
+            startActivityForResult(intent, REQ_SAVE_LOG)
+        }
+    }
+
+    @Deprecated("SAF needs the legacy callback")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == REQ_SAVE_LOG) {
+            if (resultCode == RESULT_OK && data?.data != null) {
+                runCatching {
+                    contentResolver.openOutputStream(data.data!!)?.use {
+                        it.write(EventLog.previousText().toByteArray())
+                    }
+                    Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
+                }.onFailure {
+                    Toast.makeText(this, "Failed: $it", Toast.LENGTH_LONG).show()
+                }
+            }
+            return
+        }
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    companion object {
+        private const val REQ_SAVE_LOG = 2001
     }
 }

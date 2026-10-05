@@ -28,6 +28,7 @@
     <string name="js_label">JavaScript (runs after page load)</string>
     <string name="save_reload">Save and reload</string>
     <string name="save_done">Saved (applies on reload)</string>
+    <string name="download_log">Download previous log</string>
     <string name="edit_url">Edit server URL</string>
     <string name="checking">Checking…</string>
     <string name="err_unreachable">Cannot reach that address. Check the URL.</string>
