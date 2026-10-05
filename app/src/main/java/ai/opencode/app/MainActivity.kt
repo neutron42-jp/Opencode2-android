@@ -90,8 +90,7 @@ class MainActivity : AppCompatActivity() {
         errorView = findViewById(R.id.error_view)
         loadingView = findViewById(R.id.loading_view)
         findViewById<MaterialButton>(R.id.btn_retry).setOnClickListener {
-            errorView.visibility = View.GONE
-            webView.reload()
+            reloadNow()
         }
         findViewById<MaterialButton>(R.id.btn_settings).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
@@ -223,9 +222,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (prefs.refreshRequested && this::webView.isInitialized) {
+        if (prefs.refreshRequested) {
             prefs.refreshRequested = false
-            webView.reload()
+            reloadNow()
         } else {
             probeServer()
         }
@@ -264,20 +263,34 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleIntent(intent: Intent?) {
         if (intent?.action == ACTION_RELOAD) {
-            if (this::webView.isInitialized) webView.reload()
+            reloadNow()
             return
         }
         val first = intent?.getStringExtra(EXTRA_FIRST_URL) ?: requireServerUrl()
         if (!this::webView.isInitialized) return
-        // about:blank carries no app UI, so nothing to wait for.
-        expectRender = first != "about:blank"
-        // Explicit navigation (e.g. after editing the URL) always loads.
         if (webView.url == null || webView.url != first ||
             intent?.hasExtra(EXTRA_FIRST_URL) == true
         ) {
-            errorView.visibility = View.GONE
-            webView.loadUrl(first)
+            lastUrl = first
+            reloadNow()
         }
+    }
+
+    private var lastUrl: String? = null
+
+    /**
+     * Every refresh path goes through here. reload() is a no-op when the
+     * previous load never committed (e.g. first launch failed), leaving a
+     * dead black page, so always navigate explicitly.
+     */
+    fun reloadNow() {
+        if (!this::webView.isInitialized) return
+        val u = lastUrl ?: prefs.serverUrl ?: return
+        lastUrl = u
+        // about:blank carries no app UI, so nothing to wait for.
+        expectRender = u != "about:blank"
+        errorView.visibility = View.GONE
+        webView.loadUrl(u)
     }
 
     @Deprecated("file chooser needs the legacy callback")
@@ -324,10 +337,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun reloadWebView() {
-        if (this::webView.isInitialized) {
-            errorView.visibility = View.GONE
-            webView.reload()
-        }
+        reloadNow()
     }
 
     fun openSettings() {
