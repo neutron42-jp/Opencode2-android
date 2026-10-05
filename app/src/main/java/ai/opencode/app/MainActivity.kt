@@ -57,6 +57,13 @@ class MainActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.btn_settings).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
+        findViewById<MaterialButton>(R.id.btn_edit_url).setOnClickListener {
+            startActivity(
+                Intent(this, SetupActivity::class.java).apply {
+                    putExtra(SetupActivity.EXTRA_EDIT_URL, prefs.serverUrl)
+                }
+            )
+        }
 
         webView = findViewById(R.id.webview)
         with(webView.settings) {
@@ -183,7 +190,12 @@ class MainActivity : AppCompatActivity() {
             return
         }
         val first = intent?.getStringExtra(EXTRA_FIRST_URL) ?: requireServerUrl()
-        if (this::webView.isInitialized && webView.url == null) {
+        if (!this::webView.isInitialized) return
+        // Explicit navigation (e.g. after editing the URL) always loads.
+        if (webView.url == null || webView.url != first ||
+            intent?.hasExtra(EXTRA_FIRST_URL) == true
+        ) {
+            errorView.visibility = View.GONE
             webView.loadUrl(first)
         }
     }
