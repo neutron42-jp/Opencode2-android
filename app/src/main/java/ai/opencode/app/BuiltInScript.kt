@@ -29,15 +29,15 @@ object BuiltInScript {
         row.style.marginTop = '2px';
         row.innerHTML =
           '<button type="button" class="' + btnClass() + '">' +
-            icon('opencode-v2-icon-refresh') + '<span>更新</span></button>' +
+            icon('opencode-v2-icon-sliders') + '<span>App settings</span></button>' +
           '<button type="button" class="' + btnClass() + '">' +
-            icon('opencode-v2-icon-sliders') + '<span>アプリ設定</span></button>';
+            icon('opencode-v2-icon-refresh') + '<span>Reload</span></button>';
         var btns = row.querySelectorAll('button');
         btns[0].addEventListener('click', function(){
-          if (window.OpenCodeApp) OpenCodeApp.reload();
+          if (window.OpenCodeApp) OpenCodeApp.openSettings();
         });
         btns[1].addEventListener('click', function(){
-          if (window.OpenCodeApp) OpenCodeApp.openSettings();
+          if (window.OpenCodeApp) OpenCodeApp.reload();
         });
         settings.parentElement.after(row);
       }
