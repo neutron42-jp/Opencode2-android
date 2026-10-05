@@ -18,4 +18,9 @@ class AppBridge(private val activity: MainActivity) {
 
     @JavascriptInterface
     fun getServerUrl(): String = activity.currentServerUrl()
+
+    @JavascriptInterface
+    fun onFirstRender() {
+        activity.runOnUiThread { activity.onFirstRender() }
+    }
 }

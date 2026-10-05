@@ -23,6 +23,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.TextView
 import android.widget.Toast
+import java.net.InetSocketAddress
+import java.net.Socket
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
@@ -39,6 +41,7 @@ class MainActivity : AppCompatActivity() {
         const val ACTION_RELOAD = "ai.opencode.app.RELOAD"
         private const val REQ_FILE = 1001
         private const val WATCHDOG_MS = 12_000L
+        private const val PROBE_TIMEOUT_MS = 3_000
     }
 
     private lateinit var webView: WebView
@@ -52,10 +55,12 @@ class MainActivity : AppCompatActivity() {
     private val watchdogHandler = Handler(Looper.getMainLooper())
     private var watchdog: Runnable? = null
     private var pageDone = false
+    private var expectRender = true
 
     private fun armWatchdog() {
         cancelWatchdog()
         pageDone = false
+        if (!expectRender) return
         watchdog = Runnable {
             if (!pageDone && this::webView.isInitialized) {
                 webView.stopLoading()
@@ -131,9 +136,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onPageFinished(view: WebView, url: String) {
-                pageDone = true
-                cancelWatchdog()
-                loadingView.visibility = View.GONE
+                injectRenderHook()
                 injectBuiltIn()
                 injectUserStyle()
                 injectPendingShare()
@@ -223,7 +226,40 @@ class MainActivity : AppCompatActivity() {
         if (prefs.refreshRequested && this::webView.isInitialized) {
             prefs.refreshRequested = false
             webView.reload()
+        } else {
+            probeServer()
         }
+    }
+
+    /**
+     * A loaded page shows no errors when the route dies later
+     * (e.g. VPN off while backgrounded), so probe on return.
+     */
+    private fun probeServer() {
+        val base = prefs.serverUrl ?: return
+        if (!this::webView.isInitialized || webView.url == null) return
+        if (errorView.visibility == View.VISIBLE) return
+        if (loadingView.visibility == View.VISIBLE) return
+        Thread {
+            val ok = runCatching {
+                val u = Uri.parse(base)
+                Socket().use { s ->
+                    s.connect(
+                        InetSocketAddress(u.host, if (u.port != -1) u.port else 80),
+                        PROBE_TIMEOUT_MS
+                    )
+                }
+                true
+            }.getOrDefault(false)
+            runOnUiThread {
+                if (!ok && errorView.visibility != View.VISIBLE &&
+                    this::webView.isInitialized
+                ) {
+                    webView.stopLoading()
+                    showLoadError(getString(R.string.err_timeout))
+                }
+            }
+        }.start()
     }
 
     private fun handleIntent(intent: Intent?) {
@@ -233,6 +269,8 @@ class MainActivity : AppCompatActivity() {
         }
         val first = intent?.getStringExtra(EXTRA_FIRST_URL) ?: requireServerUrl()
         if (!this::webView.isInitialized) return
+        // about:blank carries no app UI, so nothing to wait for.
+        expectRender = first != "about:blank"
         // Explicit navigation (e.g. after editing the URL) always loads.
         if (webView.url == null || webView.url != first ||
             intent?.hasExtra(EXTRA_FIRST_URL) == true
@@ -297,6 +335,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun currentServerUrl(): String = prefs.serverUrl ?: ""
+
+    /** Called from the page once the WebUI has rendered its first frame. */
+    fun onFirstRender() {
+        if (!this::webView.isInitialized) return
+        pageDone = true
+        cancelWatchdog()
+        loadingView.visibility = View.GONE
+    }
+
+    /** Watches #root until the SPA renders, then reports back. */
+    private fun injectRenderHook() {
+        webView.evaluateJavascript(
+            "(function(){" +
+                "if(window.__ocRenderHook)return;window.__ocRenderHook=true;" +
+                "function ok(){var r=document.getElementById('root');" +
+                "if(r&&r.children.length>0){if(window.OpenCodeApp)OpenCodeApp.onFirstRender();return true;}" +
+                "return false;}" +
+                "if(ok())return;" +
+                "var o=new MutationObserver(function(){if(ok())o.disconnect();});" +
+                "o.observe(document.documentElement,{childList:true,subtree:true});" +
+                "})()",
+            null
+        )
+    }
 
     /** Built-in drawer buttons (Reload / App settings), styled like stock ones. */
     private fun injectBuiltIn() {
