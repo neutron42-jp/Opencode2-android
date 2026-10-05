@@ -35,14 +35,17 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         val enable = findViewById<CheckBox>(R.id.check_enable)
+        val appmenu = findViewById<CheckBox>(R.id.check_appmenu)
         val css = findViewById<TextInputEditText>(R.id.input_css)
         val js = findViewById<TextInputEditText>(R.id.input_js)
         enable.isChecked = prefs.userScriptEnabled
+        appmenu.isChecked = prefs.appMenuEnabled
         css.setText(prefs.userCss.orEmpty())
         js.setText(prefs.userJs.orEmpty())
 
         findViewById<MaterialButton>(R.id.btn_save).setOnClickListener {
             prefs.userScriptEnabled = enable.isChecked
+            prefs.appMenuEnabled = appmenu.isChecked
             prefs.userCss = css.text.toString()
             prefs.userJs = js.text.toString()
             prefs.refreshRequested = true

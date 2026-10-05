@@ -33,6 +33,10 @@ class ServerPrefs(context: Context) {
         get() = prefs.getBoolean(KEY_REFRESH, false)
         set(value) = prefs.edit { putBoolean(KEY_REFRESH, value) }
 
+    var appMenuEnabled: Boolean
+        get() = prefs.getBoolean(KEY_APPMENU, true)
+        set(value) = prefs.edit { putBoolean(KEY_APPMENU, value) }
+
     fun clearSession() {
         prefs.edit {
             remove(KEY_SHARE)
@@ -46,6 +50,7 @@ class ServerPrefs(context: Context) {
         private const val KEY_US_CSS = "userscript_css"
         private const val KEY_US_JS = "userscript_js"
         private const val KEY_REFRESH = "refresh_requested"
+        private const val KEY_APPMENU = "appmenu_enabled"
 
         /** Normalize user input: trim, add http:// when missing, drop trailing /. */
         fun normalize(raw: String): String {

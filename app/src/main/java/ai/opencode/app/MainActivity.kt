@@ -80,6 +80,7 @@ class MainActivity : AppCompatActivity() {
         webView.isHapticFeedbackEnabled = false
 
         CookieManager.getInstance().setAcceptCookie(true)
+        webView.addJavascriptInterface(AppBridge(this), "OpenCodeApp")
 
         webView.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
@@ -87,6 +88,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onPageFinished(view: WebView, url: String) {
+                injectBuiltIn()
                 injectUserStyle()
                 injectPendingShare()
             }
@@ -226,6 +228,25 @@ class MainActivity : AppCompatActivity() {
             val other = Uri.parse(target)
             base.host == other.host && base.port == other.port
         }.getOrDefault(false)
+    }
+
+    fun reloadWebView() {
+        if (this::webView.isInitialized) {
+            errorView.visibility = View.GONE
+            webView.reload()
+        }
+    }
+
+    fun openSettings() {
+        startActivity(Intent(this, SettingsActivity::class.java))
+    }
+
+    fun currentServerUrl(): String = prefs.serverUrl ?: ""
+
+    /** Built-in drawer buttons (更新 / アプリ設定), styled like stock ones. */
+    private fun injectBuiltIn() {
+        if (!prefs.appMenuEnabled) return
+        webView.evaluateJavascript(BuiltInScript.JS, null)
     }
 
     /** Custom CSS/JS from the in-app editor, applied after every page load. */

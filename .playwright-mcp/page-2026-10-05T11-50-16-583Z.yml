@@ -1,0 +1,16 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - button "Tabs" [ref=e65]:
+        - generic [ref=e68]: Home
+        - generic [ref=e69]: "0"
+    - main [ref=e15]:
+      - generic [ref=e18]:
+        - button "Projects" [ref=e71]:
+          - generic [ref=e74]: All projects
+        - region "scrollable content" [ref=e20]:
+          - region "Recent sessions" [ref=e37]:
+            - textbox "Search sessions" [ref=e44]
+            - generic [ref=e45]: Loading
+  - generic:
+    - region "Notifications alt+T"

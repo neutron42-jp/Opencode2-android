@@ -48,6 +48,14 @@
             android:layout_marginTop="16dp"
             android:text="外観修正を有効にする" />
 
+        <CheckBox
+            android:id="@+id/check_appmenu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="WebUIのメニューに更新・アプリ設定を追加"
+            android:checked="true" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
