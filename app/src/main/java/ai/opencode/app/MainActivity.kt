@@ -43,6 +43,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var errorView: View
+    private lateinit var loadingView: View
     private lateinit var prefs: ServerPrefs
     private var fileChooser: ValueCallback<Array<Uri>>? = null
 
@@ -70,6 +71,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showLoadError(detail: String) {
+        loadingView.visibility = View.GONE
         errorView.visibility = View.VISIBLE
         findViewById<TextView>(R.id.error_detail).text = detail
     }
@@ -81,6 +83,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         errorView = findViewById(R.id.error_view)
+        loadingView = findViewById(R.id.loading_view)
         findViewById<MaterialButton>(R.id.btn_retry).setOnClickListener {
             errorView.visibility = View.GONE
             webView.reload()
@@ -123,12 +126,14 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
                 errorView.visibility = View.GONE
+                loadingView.visibility = View.VISIBLE
                 armWatchdog()
             }
 
             override fun onPageFinished(view: WebView, url: String) {
                 pageDone = true
                 cancelWatchdog()
+                loadingView.visibility = View.GONE
                 injectBuiltIn()
                 injectUserStyle()
                 injectPendingShare()
@@ -142,6 +147,7 @@ class MainActivity : AppCompatActivity() {
                 if (request.isForMainFrame) {
                     pageDone = true
                     cancelWatchdog()
+                    loadingView.visibility = View.GONE
                     errorView.visibility = View.VISIBLE
                     findViewById<TextView>(R.id.error_detail).text =
                         getString(R.string.error_detail, error.errorCode, error.description)
